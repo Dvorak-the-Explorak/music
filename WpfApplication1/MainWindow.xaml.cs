@@ -50,12 +50,18 @@ namespace WpfApplication1
         public MainWindow()
         {
             InitializeComponent();
-            string filename = "C:\\Users\\Joe\\Documents\\fftmusic\\music\\WpfApplication1\\Jupiter.wav";//openFile("Select Audio (wav) file");
+            string filename = @"C:\Users\Joe\Documents\fftmusic\music\WpfApplication1\Jupiter.wav";//openFile("Select Audio (wav) file");
             //string xmlfile = "C:\\Users\\Joe\\Documents\\fftmusic\\music\\WpfApplication1\\Jupiter.xml";// openFile("Select Score (xml) file");
             file = new Audio(filename);
             //Thread check = new Thread(new ThreadStart(updateSlider));                     
             loadWave(filename);
-            freqDomain();
+                 
+            int trial = 1;
+            while (trial --> 0)
+            {
+                freqDomain();
+            }
+            Console.WriteLine("num calls to stft: " + timefreq.count);
             //sheetmusic = readXML(xmlfile);
             //onsetDetection();            
             //loadImage();
@@ -769,10 +775,11 @@ namespace WpfApplication1
             playback.Dispose();
         }
 
-        // FFT function for Pitch Detection
-
+         //FFT function for Pitch Detection 
         public Complex[] fft(Complex[] x, int L)
         {
+
+            Console.WriteLine("mainfft called");
             int ii = 0;
             int kk = 0;
             int N = x.Length;
