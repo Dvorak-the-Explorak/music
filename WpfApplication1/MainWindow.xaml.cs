@@ -56,12 +56,11 @@ namespace WpfApplication1
             //Thread check = new Thread(new ThreadStart(updateSlider));                     
             loadWave(filename);
                  
-            int trial = 1;
+            int trial = 100;
             while (trial --> 0)
             {
                 freqDomain();
             }
-            Console.WriteLine("num calls to stft: " + timefreq.count);
             //sheetmusic = readXML(xmlfile);
             //onsetDetection();            
             //loadImage();
