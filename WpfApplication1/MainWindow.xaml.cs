@@ -50,16 +50,16 @@ namespace WpfApplication1
         public MainWindow()
         {
             InitializeComponent();
-            string filename = "C:\\Users\\Joe\\Downloads\\DigitalMusic\\WpfApplication1\\Jupiter.wav";//openFile("Select Audio (wav) file");
-            string xmlfile = "C:\\Users\\Joe\\Downloads\\DigitalMusic\\WpfApplication1\\Jupiter.xml";// openFile("Select Score (xml) file");
+            string filename = "C:\\Users\\Joe\\Documents\\fftmusic\\music\\WpfApplication1\\Jupiter.wav";//openFile("Select Audio (wav) file");
+            //string xmlfile = "C:\\Users\\Joe\\Documents\\fftmusic\\music\\WpfApplication1\\Jupiter.xml";// openFile("Select Score (xml) file");
             file = new Audio(filename);
-            Thread check = new Thread(new ThreadStart(updateSlider));                     
+            //Thread check = new Thread(new ThreadStart(updateSlider));                     
             loadWave(filename);
             freqDomain();
-            sheetmusic = readXML(xmlfile);
-            onsetDetection();            
-            loadImage();
-            loadHistogram();
+            //sheetmusic = readXML(xmlfile);
+            //onsetDetection();            
+            //loadImage();
+            //loadHistogram();
             //playBack();
             //check.Start();         
 

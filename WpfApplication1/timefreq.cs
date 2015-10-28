@@ -116,51 +116,49 @@ namespace WpfApplication1
             Console.WriteLine("fftMax: " + fftMax);
             Console.WriteLine();
 
-            sw.Restart();
+            //sw.Restart();
 
 
-            Parallel.For(0, (int)(2 * Math.Floor((double)N / (double)wSamp) - 1), ii =>
-            {
-                Complex[] temp = new Complex[wSamp];
-                Complex[] tempFFT = new Complex[wSamp];
+            //Parallel.For(0, (int)(2 * Math.Floor((double)N / (double)wSamp) - 1), ii =>
+            //{
+            //    Complex[] temp = new Complex[wSamp];
+            //    Complex[] tempFFT = new Complex[wSamp];
 
-                for (int jj = 0; jj < wSamp; jj++)
-                {
-                    temp[jj] = x[ii * (wSamp / 2) + jj];
-                }
-                tempFFT = fft(temp);
+            //    for (int jj = 0; jj < wSamp; jj++)
+            //    {
+            //        temp[jj] = x[ii * (wSamp / 2) + jj];
+            //    }
+            //    tempFFT = fft(temp);
 
-                //#TODO parallelisable if you can keep track of highest
-                for (int kk = 0; kk < wSamp / 2; kk++)
-                {
-                    Z[kk][ii] = (float)Complex.Abs(tempFFT[kk]);
+            //    //#TODO parallelisable if you can keep track of highest
+            //    for (int kk = 0; kk < wSamp / 2; kk++)
+            //    {
+            //        Z[kk][ii] = (float)Complex.Abs(tempFFT[kk]);
 
-                    if (Z[kk][ii] > fftMaxes[ii])
-                    {
-                        fftMaxes[ii] = Z[kk][ii];
-                    }
-                }
+            //        if (Z[kk][ii] > fftMaxes[ii])
+            //        {
+            //            fftMaxes[ii] = Z[kk][ii];
+            //        }
+            //    }
 
 
-            });
-            fftMax = fftMaxes.Max();
+            //});
+            //fftMax = fftMaxes.Max();
             
-            sw.Stop();
             //sw.Stop();
-            ts = sw.Elapsed;
+            ////sw.Stop();
+            //ts = sw.Elapsed;
 
-            time = String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Console.WriteLine("parallel fft calls took " + time);
-            Console.WriteLine("fftMax: " + fftMax);
+            //time = String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
+            //Console.WriteLine("parallel fft calls took " + time);
+            //Console.WriteLine("fftMax: " + fftMax);
 
-            Boolean diff = false;
+            //Boolean diff = false;
 
             for (int ii = 0; ii < 2 * Math.Floor((double)N / (double)wSamp) - 1; ii++)
             {
                 for (int kk = 0; kk < wSamp / 2; kk++)
                 {
-                    if (!diff && Y[kk][ii] != Z[kk][ii])
-                        Console.WriteLine("wrong: " + kk + " " + ii);
                     Y[kk][ii] /= fftMax;
                 }
             }
@@ -205,12 +203,15 @@ namespace WpfApplication1
                     }
                 }
 
-                Parallel.Invoke(() =>  {
-                                    E = fft(even);
-                                }, 
-                                () => {
-                                    O = fft(odd);
-                                });
+                //Parallel.Invoke(() =>  {
+                //                    E = fft(even);
+                //                }, 
+                //                () => {
+                //                    O = fft(odd);
+                //                });
+
+                E = fft(even);
+                O = fft(odd);
 
 
                 for (kk = 0; kk < N; kk++)
