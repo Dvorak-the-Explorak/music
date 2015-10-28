@@ -6,17 +6,62 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.IO;
 
 namespace WpfApplication1
 {
+
+    public class Timelogger : Stopwatch
+    {
+        public string filename;
+
+        public Timelogger(string _filename, string header)
+        {
+            filename = @"C:\Users\Joe\Documents\fftmusic\music\" + _filename;
+
+            //create the file if not exists
+            if (!File.Exists(filename))
+            {
+                using (StreamWriter stream = File.CreateText(filename))
+                {
+                    stream.WriteLine(header);
+                }
+            }
+
+        }
+
+        public override string ToString()
+        {
+            TimeSpan ts = Elapsed;
+            return String.Format("{0:00}.{1:00}", ts.Hours * 3600 + ts.Minutes * 50 + ts.Seconds, ts.Milliseconds / 10);
+        }
+
+        public void log() { log(true); }
+
+        public void log(Boolean writeConsole)
+        {
+            TimeSpan ts = Elapsed;
+            string time = String.Format("{0:00}.{1:00}", ts.Hours * 3600 + ts.Minutes * 50 + ts.Seconds, ts.Milliseconds / 10);
+            using (StreamWriter stream = File.AppendText(filename))
+            {
+                stream.WriteLine(time);
+            }
+            if (writeConsole)
+                Console.WriteLine(time + " added to " + filename);
+        }
+    }
+
     public class timefreq
     {
         public float[][] timeFreqData;
         public int wSamp;
         public Complex[] twiddles;
 
+        public Timelogger time;
+
         public timefreq(float[] x, int windowSamp)
         {
+            //time = new Timelogger(@"fft\splitLoopRefactored.txt", "time in fft split loop sequential refactored");
             int ii;
             double pi = 3.14159265;
             Complex i = Complex.ImaginaryOne;
@@ -55,15 +100,15 @@ namespace WpfApplication1
             }
 
             timeFreqData = stft(compX, wSamp);
-	
+
+
         }
 
         float[][] stft(Complex[] x, int wSamp)
         {
-            //int ii = 0;
-            //int jj = 0;
-            //int kk = 0;
-            //int ll = 0;
+
+            Timelogger totalRuntime = new Timelogger(@"totalTime\sequential", "time for freqDomain() sequentially");
+            totalRuntime.Start();
             int N = x.Length;
             float fftMax = 0;
             float[] fftMaxes = new float[2 * (int)Math.Floor((double)N / (double)wSamp)];
@@ -76,11 +121,10 @@ namespace WpfApplication1
                 Y[ll] = new float[2 * (int)Math.Floor((double)N / (double)wSamp)];
                 Z[ll] = new float[2 * (int)Math.Floor((double)N / (double)wSamp)];
             }
-            
 
 
-            Stopwatch sw = new Stopwatch();
-            sw.Start();
+
+            //Timelogger sw = new Timelogger(@"fft\fftSplitParallel.txt", "time for fft with splitting loop paralellised");
             for (int ii = 0; ii < 2 * Math.Floor((double)N / (double)wSamp) - 1; ++ii)
             {
 
@@ -91,7 +135,10 @@ namespace WpfApplication1
                 {
                     temp[jj] = x[ii * (wSamp / 2) + jj];
                 }
+
+                //sw.Start();
                 tempFFT = fft(temp);
+                //sw.Stop();
 
                 //#TODO parallelisable if you can keep track of highest
                 for (int kk = 0; kk < wSamp / 2; kk++)
@@ -106,54 +153,8 @@ namespace WpfApplication1
 
 
             }
-
-            sw.Stop();
-            //sw.Stop();
-            TimeSpan ts = sw.Elapsed;
-
-            string time = String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            Console.WriteLine("sequential fft calls took " + time);
-            Console.WriteLine("fftMax: " + fftMax);
-            Console.WriteLine();
-
-            //sw.Restart();
-
-
-            //Parallel.For(0, (int)(2 * Math.Floor((double)N / (double)wSamp) - 1), ii =>
-            //{
-            //    Complex[] temp = new Complex[wSamp];
-            //    Complex[] tempFFT = new Complex[wSamp];
-
-            //    for (int jj = 0; jj < wSamp; jj++)
-            //    {
-            //        temp[jj] = x[ii * (wSamp / 2) + jj];
-            //    }
-            //    tempFFT = fft(temp);
-
-            //    //#TODO parallelisable if you can keep track of highest
-            //    for (int kk = 0; kk < wSamp / 2; kk++)
-            //    {
-            //        Z[kk][ii] = (float)Complex.Abs(tempFFT[kk]);
-
-            //        if (Z[kk][ii] > fftMaxes[ii])
-            //        {
-            //            fftMaxes[ii] = Z[kk][ii];
-            //        }
-            //    }
-
-
-            //});
-            //fftMax = fftMaxes.Max();
-            
-            //sw.Stop();
-            ////sw.Stop();
-            //ts = sw.Elapsed;
-
-            //time = String.Format("{0:00}:{1:00}:{2:00}.{3:00}", ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
-            //Console.WriteLine("parallel fft calls took " + time);
-            //Console.WriteLine("fftMax: " + fftMax);
-
-            //Boolean diff = false;
+            //sw.log();
+            //time.log();
 
             for (int ii = 0; ii < 2 * Math.Floor((double)N / (double)wSamp) - 1; ii++)
             {
@@ -163,6 +164,8 @@ namespace WpfApplication1
                 }
             }
 
+            totalRuntime.Stop();
+            totalRuntime.log();
             return Y;
         }
 
@@ -170,8 +173,6 @@ namespace WpfApplication1
         //#TODO check for parallelism, nested loops
         public Complex[] fft(Complex[] x)
         {
-            int ii = 0;
-            int kk = 0;
             int N = x.Length;
 
             Complex[] Y = new Complex[N];
@@ -190,32 +191,21 @@ namespace WpfApplication1
                 Complex[] odd = new Complex[N/2];
 
                 //this for loop and the next fft calls are inherently separable
-                for (ii = 0; ii < N; ii++)
+                //DON"T PARALLEL THIS
+                //time.Start();
+                for (int ii = 0; ii < N/2; ii++)
                 {
-
-                    if (ii % 2 == 0)
-                    {
-                        even[ii / 2] = x[ii];
-                    }
-                    if (ii % 2 == 1)
-                    {
-                        odd[(ii - 1) / 2] = x[ii];
-                    }
+                    even[ii] = x[2*ii];
+                    odd[ii] = x[2*ii + 1];
                 }
-
-                //Parallel.Invoke(() =>  {
-                //                    E = fft(even);
-                //                }, 
-                //                () => {
-                //                    O = fft(odd);
-                //                });
+                //time.Stop();
 
                 E = fft(even);
                 O = fft(odd);
 
 
-                for (kk = 0; kk < N; kk++)
-                {
+                //DON"T PARALLEL THIS
+                for (int kk = 0; kk < N; kk++){
                     Y[kk] = E[(kk % (N / 2))] + O[(kk % (N / 2))] * twiddles[kk * wSamp / N];
                 }
             }
