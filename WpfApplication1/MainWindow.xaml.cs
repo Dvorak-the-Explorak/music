@@ -55,7 +55,7 @@ namespace WpfApplication1
             file = new Audio(filename);
             //Thread check = new Thread(new ThreadStart(updateSlider));                     
             loadWave(filename);
-            int trials = 20;
+            int trials = 100;
             while (trials --> 0)
             {
                 freqDomain();

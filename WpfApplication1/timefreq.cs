@@ -107,7 +107,7 @@ namespace WpfApplication1
         float[][] stft(Complex[] x, int wSamp)
         {
 
-            Timelogger totalRuntime = new Timelogger(@"totalTime\sequential", "time for freqDomain() sequentially");
+            Timelogger totalRuntime = new Timelogger(@"totalTime\invokeSometimes256.txt", "time for freqDomain() with fft invoke down to N=256");
             totalRuntime.Start();
             int N = x.Length;
             float fftMax = 0;
@@ -126,6 +126,7 @@ namespace WpfApplication1
 
             //Timelogger sw = new Timelogger(@"fft\fftSplitParallel.txt", "time for fft with splitting loop paralellised");
             for (int ii = 0; ii < 2 * Math.Floor((double)N / (double)wSamp) - 1; ++ii)
+            //Parallel.For(0, (long)(2 * Math.Floor((double)N / (double)wSamp) - 1), ii =>
             {
 
                 Complex[] temp = new Complex[wSamp];
@@ -193,16 +194,38 @@ namespace WpfApplication1
                 //this for loop and the next fft calls are inherently separable
                 //DON"T PARALLEL THIS
                 //time.Start();
-                for (int ii = 0; ii < N/2; ii++)
+
+                //if it's coarse enough, parallelise
+                if (N >256)
                 {
-                    even[ii] = x[2*ii];
-                    odd[ii] = x[2*ii + 1];
+
+                    Parallel.Invoke(() =>
+                    {
+                        for (int ii = 0; ii < N; ii += 2)
+                        {
+                            even[ii / 2] = x[ii];
+                        }
+
+                        E = fft(even);
+                    }, () =>
+                    {
+                        for (int ii = 1; ii < N; ii += 2)
+                        {
+                            odd[ii / 2] = x[ii];
+                        }
+                        O = fft(odd);
+                    });
                 }
-                //time.Stop();
-
-                E = fft(even);
-                O = fft(odd);
-
+                else
+                {
+                    for (int ii = 0; ii < N / 2; ++ii)
+                    {
+                        even[ii] = x[2 * ii];
+                        odd[ii] = x[2 * ii + 1];
+                    }
+                    E = fft(even);
+                    O = fft(odd);
+                }
 
                 //DON"T PARALLEL THIS
                 for (int kk = 0; kk < N; kk++){
