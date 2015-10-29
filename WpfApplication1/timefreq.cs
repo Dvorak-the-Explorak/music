@@ -57,6 +57,7 @@ namespace WpfApplication1
         public int wSamp;
         public Complex[] twiddles;
 
+        public static int parDegree = 5;
 
         public timefreq(float[] x, int windowSamp)
         {
@@ -103,8 +104,8 @@ namespace WpfApplication1
 
         float[][] stft(Complex[] x, int wSamp)
         {
-            
-            Timelogger time = new Timelogger(@"totalTime\sftfPar.txt", "stft main loop parallelised");
+
+            Timelogger time = new Timelogger(@"totalTime\sftfPar" + parDegree + "Thread.txt", "stft main loop parallelised with " + parDegree + " threads");
             time.Start();
 
 
@@ -121,7 +122,10 @@ namespace WpfApplication1
                 Y[ll] = new float[2 * (int)Math.Floor((double)N / (double)wSamp)];
             }
 
-            Parallel.For(0, (int)(2 * Math.Floor((double)N / (double)wSamp) - 1), ii =>
+
+            ParallelOptions options = new ParallelOptions();
+            options.MaxDegreeOfParallelism = parDegree;
+            Parallel.For(0, (int)(2 * Math.Floor((double)N / (double)wSamp) - 1), options, ii =>
             {
                 Complex[] temp = new Complex[wSamp];
                 Complex[] tempFFT = new Complex[wSamp];
@@ -190,13 +194,6 @@ namespace WpfApplication1
                     even[ii] = x[2*ii];
                     odd[ii] = x[2*ii+1];
                 }
-
-                //Parallel.Invoke(() =>  {
-                //                    E = fft(even);
-                //                }, 
-                //                () => {
-                //                    O = fft(odd);
-                //                });
 
                 E = fft(even);
                 O = fft(odd);
