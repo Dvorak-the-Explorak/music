@@ -116,7 +116,7 @@ namespace WpfApplication1
             float[][] Y = new float[wSamp / 2][];
             float[][] Z = new float[wSamp / 2][];
 
-            //Parallel bad, only used once and is slower
+            //Don't parallelise this, it's slower
             for (int ll = 0; ll < wSamp / 2; ++ll)
             {
                 Y[ll] = new float[2 * (int)Math.Floor((double)N / (double)wSamp)];
@@ -136,7 +136,6 @@ namespace WpfApplication1
                 }
                 tempFFT = fft(temp);
 
-                //#TODO parallelisable if you can keep track of highest
                 for (int kk = 0; kk < wSamp / 2; kk++)
                 {
                     Y[kk][ii] = (float)Complex.Abs(tempFFT[kk]);
@@ -151,7 +150,7 @@ namespace WpfApplication1
             });
             fftMax = fftMaxes.Max();
 
-            //Only used once, not important if you use parallel, saves 0.2s
+            //Only used once, not important if you use parallel, saves 0.2s if you do
             Parallel.For(0, (long)(2 * Math.Floor((double)N / (double)wSamp) - 1), ii =>
             {
                 for (int kk = 0; kk < wSamp / 2; kk++)
@@ -166,7 +165,6 @@ namespace WpfApplication1
         }
 
 
-        //#TODO check for parallelism, nested loops
         public Complex[] fft(Complex[] x)
         {
             int ii = 0;

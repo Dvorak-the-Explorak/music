@@ -296,7 +296,6 @@ namespace WpfApplication1
 
         }
 
-        //#TODO embarrasingly parallelisable, no dependencies
         // Transforms data into Time-Frequency representation
         public void freqDomain()
         {
@@ -342,7 +341,6 @@ namespace WpfApplication1
             HFC = new float[stftRep.timeFreqData[0].Length];
 
 
-            //#TODO check - nested loops
             for (int jj = 0; jj < stftRep.timeFreqData[0].Length; jj++)
             {
                 for (int ii = 0; ii < stftRep.wSamp / 2; ii++)
@@ -395,7 +393,6 @@ namespace WpfApplication1
                 lengths.Add(noteStops[ii] - noteStarts[ii]);
             }            
 
-            //#TODO ~many~ check nested loops
             for (int mm = 0; mm < lengths.Count; mm++)
             {
                 int nearest = (int)Math.Pow(2, Math.Ceiling(Math.Log(lengths[mm], 2)));
