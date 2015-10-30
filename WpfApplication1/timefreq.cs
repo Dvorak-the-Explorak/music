@@ -57,10 +57,13 @@ namespace WpfApplication1
         public int wSamp;
         public Complex[] twiddles;
 
-        public static int parDegree = 4;
+        public static int parDegree;
 
-        public timefreq(float[] x, int windowSamp)
+        public timefreq(float[] x, int windowSamp, int _parDegree)
         {
+            parDegree = _parDegree;
+
+
             int ii;
             double pi = 3.14159265;
             Complex i = Complex.ImaginaryOne;
@@ -105,8 +108,8 @@ namespace WpfApplication1
         float[][] stft(Complex[] x, int wSamp)
         {
 
-            Timelogger time = new Timelogger(@"totalTime\sftfParSegmented" + parDegree + "Thread.txt", "stft main loop segmented with " + parDegree + " threads");
-            time.Start();
+            //Timelogger time = new Timelogger(@"totalTime\sftfParSegmented" + parDegree + "Thread.txt", "stft main loop segmented with " + parDegree + " threads");
+            //time.Start();
 
 
             int N = x.Length;
@@ -163,8 +166,8 @@ namespace WpfApplication1
                 }
             });
 
-            time.Stop();
-            time.log();
+            //time.Stop();
+            //time.log();
             return Y;
         }
 

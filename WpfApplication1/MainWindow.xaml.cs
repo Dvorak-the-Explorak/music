@@ -26,10 +26,13 @@ using NAudio;
 using NAudio.Wave;
 using System.Numerics;
 using System.Xml;
+using System.Diagnostics;
+using System.Threading.Tasks;
 
 namespace WpfApplication1
 {
-    
+
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -42,29 +45,30 @@ namespace WpfApplication1
         public Audio file;
         public musicNote[] sheetmusic;
         public WaveOut playback; // = new WaveOut();
-        public Complex[] twiddles;
-        public Complex[] compX;
+        //public Complex[] twiddles;
+        //public Complex[] compX;
         public enum pitchConv { C, Db, D, Eb, E, F, Gb, G, Ab, A, Bb, B };
         public double bpm = 70;
        
         public MainWindow()
         {
+            Timelogger allTime = new Timelogger("allPar4.txt", "Entire program parallelised 4 thread");
+            allTime.Start();
             InitializeComponent();
+
             string filename = @"C:\Users\Joe\Documents\fftmusic\music\WpfApplication1\Jupiter.wav";//openFile("Select Audio (wav) file");
-            //string xmlfile = "C:\\Users\\Joe\\Documents\\fftmusic\\music\\WpfApplication1\\Jupiter.xml";// openFile("Select Score (xml) file");
+            string xmlfile = @"C:\Users\Joe\Documents\fftmusic\music\WpfApplication1\Jupiter.xml";
             file = new Audio(filename);
             //Thread check = new Thread(new ThreadStart(updateSlider));                     
             loadWave(filename);
-                 
-            int trial = 20;
-            while (trial --> 0)
-            {
-                freqDomain();
-            }
-            //sheetmusic = readXML(xmlfile);
-            //onsetDetection();            
-            //loadImage();
-            //loadHistogram();
+            freqDomain(4);
+            sheetmusic = readXML(xmlfile);
+            onsetDetection(4);    
+            
+            loadImage();
+            loadHistogram();
+            allTime.Stop();
+            allTime.log();
             //playBack();
             //check.Start();         
 
@@ -76,6 +80,7 @@ namespace WpfApplication1
         }
 
         // Loads time-freq image for tab 1
+
         public void loadImage()
         {
 
@@ -297,9 +302,10 @@ namespace WpfApplication1
         }
 
         // Transforms data into Time-Frequency representation
-        public void freqDomain()
+
+        public void freqDomain(int parDegree)
         {
-            stftRep = new timefreq(waveIn.wave, 2048);
+            stftRep = new timefreq(waveIn.wave, 2048, parDegree);
             pixelArray = new float[stftRep.timeFreqData[0].Length * stftRep.wSamp / 2];
             for (int jj = 0; jj < stftRep.wSamp / 2; jj++)
             {
@@ -313,33 +319,28 @@ namespace WpfApplication1
 
         // Onset Detection function - Determines Start and Finish times of a note and the frequency of the note over each duration.
 
-        public void onsetDetection()
+        public void onsetDetection(int parDegree)
         {
             float[] HFC;
             int starts = 0;
             int stops = 0;
-            Complex[] Y;
-            double[] absY;
             List<int> lengths;
             List<int> noteStarts;
             List<int> noteStops;
-            List<double> pitches;
+            double[] pitches;
 
-            int ll;
             double pi = 3.14159265;
             Complex i = Complex.ImaginaryOne;
 
             noteStarts = new List<int>(100);
             noteStops = new List<int>(100);
             lengths = new List<int>(100);
-            pitches = new List<double>(100);
 
             SolidColorBrush sheetBrush = new SolidColorBrush(Colors.Black);
             SolidColorBrush ErrorBrush = new SolidColorBrush(Colors.Red);
             SolidColorBrush whiteBrush = new SolidColorBrush(Colors.White);
 
             HFC = new float[stftRep.timeFreqData[0].Length];
-
 
             for (int jj = 0; jj < stftRep.timeFreqData[0].Length; jj++)
             {
@@ -391,80 +392,107 @@ namespace WpfApplication1
             for (int ii = 0; ii < noteStops.Count; ii++)
             {
                 lengths.Add(noteStops[ii] - noteStarts[ii]);
-            }            
+            }
 
-            for (int mm = 0; mm < lengths.Count; mm++)
+
+
+            pitches = new double[lengths.Count];
+
+            //int parDegree = 4;
+
+            //Timelogger time = new Timelogger("onsetParSegmented"+parDegree+".txt", "mm for loop in onsetDirection() segmented "+parDegree);
+            //time.Start();
+            ParallelOptions op = new ParallelOptions();
+            op.MaxDegreeOfParallelism = parDegree;
+            //for (int mm = 0; mm < lengths.Count; mm++)
+            Parallel.For(0, parDegree, op, mmSplit =>
             {
-                int nearest = (int)Math.Pow(2, Math.Ceiling(Math.Log(lengths[mm], 2)));
-                twiddles = new Complex[nearest];
-                for (ll = 0; ll < nearest; ll++)
+                for(int mm = mmSplit; mm<lengths.Count; mm += parDegree)
                 {
-                    double a = 2 * pi * ll / (double)nearest;
-                    twiddles[ll] = Complex.Pow(Complex.Exp(-i), (float)a);
-                }
-
-                compX = new Complex[nearest];
-                for (int kk = 0; kk < nearest; kk++)
-                {
-                    if (kk < lengths[mm] && (noteStarts[mm] + kk) < waveIn.wave.Length)
+                    int nearest = (int)Math.Pow(2, Math.Ceiling(Math.Log(lengths[mm], 2)));
+                    //MAKE LOCAL, PASS TO FFT
+                    Complex[] tw = new Complex[nearest];
+                    for (int ll = 0; ll < nearest; ll++)
                     {
-                        compX[kk] = waveIn.wave[noteStarts[mm] + kk];
+                        double a = 2 * pi * ll / (double)nearest;
+                        tw[ll] = Complex.Exp(-i * a);
                     }
-                    else
+                    //MAKE LOCAL
+                    Complex[] compX = new Complex[nearest];
+                    for (int kk = 0; kk < nearest; kk++)
                     {
-                        compX[kk] = Complex.Zero;
+                        if (kk < lengths[mm] && (noteStarts[mm] + kk) < waveIn.wave.Length)
+                        {
+                            compX[kk] = waveIn.wave[noteStarts[mm] + kk];
+                        }
+                        else
+                        {
+                            compX[kk] = Complex.Zero;
+                        }
                     }
-                }
 
-                Y = new Complex[nearest];
 
-                Y = fft(compX, nearest);
+                    Complex[] Y = new Complex[nearest];
 
-                absY = new double[nearest];
+                    Y = fft(compX, nearest, tw);
 
-                double maximum = 0;
-                int maxInd = 0;
 
-                for (int jj = 0; jj < Y.Length; jj++)
-                {
-                    absY[jj] = Y[jj].Magnitude;
-                    if (absY[jj] > maximum)
+                    double[] absY = new double[nearest];
+
+                    double maximum = 0;
+                    int maxInd = 0;
+
+                    for (int jj = 0; jj < Y.Length; jj++)
                     {
-                        maximum = absY[jj];
-                        maxInd = jj;
+                        absY[jj] = Y[jj].Magnitude;
+                        if (absY[jj] > maximum)
+                        {
+                            maximum = absY[jj];
+                            maxInd = jj;
+                        }
                     }
-                }
 
-                for (int div = 6; div > 1; div--)
-                {
+                
+                    for (int div = 6; div > 1; div--)
+                    {
+
+                        if (maxInd > nearest / 2)
+                        {
+                            if (absY[(int)Math.Floor((double)(nearest - maxInd) / div)] / absY[(maxInd)] > 0.10)
+                            {
+                                maxInd = (nearest - maxInd) / div;
+                            }
+                        }
+                        else
+                        {
+                            if (absY[(int)Math.Floor((double)maxInd / div)] / absY[(maxInd)] > 0.10)
+                            {
+                                maxInd = maxInd / div;
+                            }
+                        }
+                    }
 
                     if (maxInd > nearest / 2)
                     {
-                        if (absY[(int)Math.Floor((double)(nearest - maxInd) / div)] / absY[(maxInd)] > 0.10)
+                        pitches[mm] = (nearest - maxInd) * waveIn.SampleRate / nearest;
+                        if (pitches[mm] < 0)
                         {
-                            maxInd = (nearest - maxInd) / div;
+                            Console.WriteLine(mm);
                         }
                     }
                     else
                     {
-                        if (absY[(int)Math.Floor((double)maxInd / div)] / absY[(maxInd)] > 0.10)
+                        pitches[mm] = maxInd * waveIn.SampleRate / nearest;
+                        if (pitches[mm] < 0)
                         {
-                            maxInd = maxInd / div;
+                            Console.WriteLine(mm);
                         }
                     }
                 }
 
-                if (maxInd > nearest / 2)
-                {
-                    pitches.Add((nearest - maxInd) * waveIn.SampleRate / nearest);
-                }
-                else
-                {
-                    pitches.Add(maxInd * waveIn.SampleRate / nearest);
-                }
-
-
-            }
+            });
+            //time.Stop();
+            //time.log();
 
             musicNote[] noteArray;
             noteArray = new musicNote[noteStarts.Count()];
@@ -484,7 +512,11 @@ namespace WpfApplication1
 
             for (int jj = 0; jj < noteArray.Length; jj++)
             {
-                notePitchArray[jj] = noteArray[jj].pitch % 12;
+                if (noteArray[jj].pitch < 0)
+                {
+                    Console.WriteLine(jj + " " + noteArray[jj].pitch);
+                }
+                notePitchArray[jj] = ((noteArray[jj].pitch) % 12 + 12)%12;
             }
 
             string[] alignedStrings = new string[2];
@@ -771,11 +803,10 @@ namespace WpfApplication1
             playback.Dispose();
         }
 
-         //FFT function for Pitch Detection 
-        public Complex[] fft(Complex[] x, int L)
-        {
+        // FFT function for Pitch Detection
 
-            Console.WriteLine("mainfft called");
+        public Complex[] fft(Complex[] x, int L, Complex[] tw)
+        {
             int ii = 0;
             int kk = 0;
             int N = x.Length;
@@ -794,25 +825,20 @@ namespace WpfApplication1
                 Complex[] even = new Complex[N / 2];
                 Complex[] odd = new Complex[N / 2];
 
-                for (ii = 0; ii < N; ii++)
-                {
 
-                    if (ii % 2 == 0)
-                    {
-                        even[ii / 2] = x[ii];
-                    }
-                    if (ii % 2 == 1)
-                    {
-                        odd[(ii - 1) / 2] = x[ii];
-                    }
+                for (ii = 0; ii < N / 2; ++ii)
+                {
+                    even[ii] = x[2 * ii];
+                    odd[ii] = x[2 * ii + 1];
                 }
 
-                E = fft(even,L);
-                O = fft(odd,L);
+
+                E = fft(even,L, tw);
+                O = fft(odd,L,tw);
 
                 for (kk = 0; kk < N; kk++)
                 {
-                    Y[kk] = E[(kk % (N / 2))] + O[(kk % (N / 2))] * twiddles[kk*(L/N)];
+                    Y[kk] = E[(kk % (N / 2))] + O[(kk % (N / 2))] * tw[kk*(L/N)];
                 }
             }
 
