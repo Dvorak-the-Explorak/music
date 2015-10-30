@@ -57,7 +57,7 @@ namespace WpfApplication1
         public int wSamp;
         public Complex[] twiddles;
 
-        public static int parDegree = 5;
+        public static int parDegree = 4;
 
         public timefreq(float[] x, int windowSamp)
         {
@@ -105,7 +105,7 @@ namespace WpfApplication1
         float[][] stft(Complex[] x, int wSamp)
         {
 
-            Timelogger time = new Timelogger(@"totalTime\sftfPar" + parDegree + "Thread.txt", "stft main loop parallelised with " + parDegree + " threads");
+            Timelogger time = new Timelogger(@"totalTime\sftfParSegmented" + parDegree + "Thread.txt", "stft main loop segmented with " + parDegree + " threads");
             time.Start();
 
 
@@ -122,27 +122,31 @@ namespace WpfApplication1
                 Y[ll] = new float[2 * (int)Math.Floor((double)N / (double)wSamp)];
             }
 
+            int stopPoint =  (int)(2 * Math.Floor((double)N / (double)wSamp) - 1);
 
             ParallelOptions options = new ParallelOptions();
             options.MaxDegreeOfParallelism = parDegree;
-            Parallel.For(0, (int)(2 * Math.Floor((double)N / (double)wSamp) - 1), options, ii =>
+            Parallel.For(0, parDegree, options, iiSplit =>
             {
-                Complex[] temp = new Complex[wSamp];
-                Complex[] tempFFT = new Complex[wSamp];
-
-                for (int jj = 0; jj < wSamp; ++jj)
+                for (int ii = iiSplit; ii < stopPoint; ii += parDegree)
                 {
-                    temp[jj] = x[ii * (wSamp / 2) + jj];
-                }
-                tempFFT = fft(temp);
+                    Complex[] temp = new Complex[wSamp];
+                    Complex[] tempFFT = new Complex[wSamp];
 
-                for (int kk = 0; kk < wSamp / 2; kk++)
-                {
-                    Y[kk][ii] = (float)Complex.Abs(tempFFT[kk]);
-
-                    if (Y[kk][ii] > fftMaxes[ii])
+                    for (int jj = 0; jj < wSamp; ++jj)
                     {
-                        fftMaxes[ii] = Y[kk][ii];
+                        temp[jj] = x[ii * (wSamp / 2) + jj];
+                    }
+                    tempFFT = fft(temp);
+
+                    for (int kk = 0; kk < wSamp / 2; kk++)
+                    {
+                        Y[kk][ii] = (float)Complex.Abs(tempFFT[kk]);
+
+                        if (Y[kk][ii] > fftMaxes[ii])
+                        {
+                            fftMaxes[ii] = Y[kk][ii];
+                        }
                     }
                 }
 

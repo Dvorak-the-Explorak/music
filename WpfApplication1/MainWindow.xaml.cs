@@ -56,7 +56,7 @@ namespace WpfApplication1
             //Thread check = new Thread(new ThreadStart(updateSlider));                     
             loadWave(filename);
                  
-            int trial = 100;
+            int trial = 20;
             while (trial --> 0)
             {
                 freqDomain();
